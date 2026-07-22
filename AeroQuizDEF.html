@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Aerodynamics — Strict Exam Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1014;--panel:#161b22;--panel2:#1c2230;--line:#2a3242;
+    --ink:#e7ebf0;--mut:#8c97a8;--dim:#5c6677;
+    --accent:#f4a836;--accent2:#38bdf8;
+    --good:#4ade80;--goodbg:#11271b;--bad:#f87171;--badbg:#2a1416;--warn:#fbbf24;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(1100px 520px at 78% -8%,rgba(56,189,248,.07),transparent 60%),
+      radial-gradient(900px 500px at 10% 110%,rgba(244,168,54,.06),transparent 60%),var(--bg);
+    background-attachment:fixed;color:var(--ink);font-family:"IBM Plex Sans",sans-serif;line-height:1.5;
+    padding:22px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:44px 44px;opacity:.05}
+  .wrap{max-width:780px;margin:0 auto;position:relative;z-index:1}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase}
+  h1{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
+  h1 span{color:var(--mut);font-weight:500}
+  .scorebox{font-family:"IBM Plex Mono",monospace;text-align:right}
+  .scorebox .s{font-size:22px;font-weight:600}
+  .scorebox .l{font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+  .bar{height:6px;background:var(--panel);border-radius:6px;overflow:hidden;margin:6px 0 16px;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .35s}
+  
+  .controls-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;align-self:flex-start}
+  .seg button{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--mut);background:none;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;transition:.15s}
+  .seg button[aria-pressed="true"]{background:var(--panel2);color:var(--ink)}
+  .seg button.exam-btn[aria-pressed="true"]{background:var(--accent2);color:#0a192f;font-weight:600;}
+  
+  .chips{display:flex;gap:7px;flex-wrap:wrap; margin-bottom:16px;}
+  .chip{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--mut);background:var(--panel);border:1px solid var(--line);padding:5px 11px;border-radius:20px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .chip:hover{border-color:var(--dim);color:var(--ink)}
+  .chip[aria-pressed="true"]{background:var(--accent);color:#1a1206;border-color:var(--accent);font-weight:600}
+  
+  .card{background:linear-gradient(180deg,var(--panel),#13171f);border:1px solid var(--line);border-radius:16px;padding:24px 22px;box-shadow:0 18px 40px -24px rgba(0,0,0,.8);animation:rise .3s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .meta{display:flex;align-items:center;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+  .pill{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent2);border:1px solid var(--line);padding:3px 9px;border-radius:20px}
+  .pill.num{color:var(--good);border-color:#1e3a2a;background:#0e1f16;font-weight:600}
+  .qnum{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim);margin-left:auto}
+  .q{font-size:18px;font-weight:600;line-height:1.45;margin-bottom:18px}
+  
+  .opts{display:flex;flex-direction:column;gap:9px}
+  .opt{display:flex;align-items:flex-start;gap:12px;text-align:left;width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:12px 14px;border-radius:11px;cursor:pointer;font-size:15px;font-family:inherit;line-height:1.4;transition:.14s;animation:rise .3s ease both}
+  .opt:hover:not(:disabled){border-color:var(--accent2);transform:translateX(2px)}
+  .opt:disabled{cursor:default}
+  .opt .k{flex:0 0 auto;width:22px;height:22px;border-radius:6px;background:var(--bg);border:1px solid var(--line);font-family:"IBM Plex Mono",monospace;font-size:12px;display:grid;place-items:center;color:var(--mut);margin-top:1px}
+  
+  .opt.correct{background:var(--goodbg);border-color:var(--good)}
+  .opt.correct .k{background:var(--good);color:#06210f;border-color:var(--good)}
+  .opt.wrong{background:var(--badbg);border-color:var(--bad)}
+  .opt.wrong .k{background:var(--bad);color:#2a0c0c;border-color:var(--bad)}
+  
+  .opt.exam-selected{background:rgba(56,189,248,.15);border-color:var(--accent2)}
+  .opt.exam-selected .k{background:var(--accent2);color:#0a192f;border-color:var(--accent2)}
+
+  .explain{margin-top:16px;border-top:1px dashed var(--line);padding-top:14px;font-size:14.5px;color:var(--mut);line-height:1.55;animation:rise .3s ease both}
+  .explain b{color:var(--ink)}
+  .verdict{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;margin-right:8px}
+  .verdict.ok{color:var(--good)}.verdict.no{color:var(--bad)}.verdict.skip{color:var(--warn)}
+  
+  .footer{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap; align-items:center;}
+  .btn{font-family:"IBM Plex Mono",monospace;font-size:13px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:11px 18px;border-radius:9px;cursor:pointer;transition:.15s; display:inline-flex; align-items:center; justify-content:center; gap:6px;}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#1a1206;border-color:var(--accent);font-weight:600}
+  .btn.exam-fwd{background:var(--accent2);color:#0a192f;border-color:var(--accent2);font-weight:600; margin-left:auto;}
+  .btn.good{border-color:var(--good);color:var(--good)}.btn.bad{border-color:var(--bad);color:var(--bad)}
+  .hint{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--dim);margin-top:14px;text-align:center}
+  .hint kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--mut);background:var(--panel)}
+  
+  .results{text-align:center;padding:18px 6px}
+  .results .big{font-family:"IBM Plex Mono",monospace;font-size:54px;font-weight:600}
+  .results .sub{color:var(--mut);margin:4px 0 8px}
+  .results .msg{font-size:15px;margin-bottom:20px}
+  .exam-breakdown { display: flex; justify-content: center; gap: 20px; margin-bottom: 24px; font-family: "IBM Plex Mono", monospace; font-size: 14px; flex-wrap: wrap;}
+  .exam-breakdown div { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); min-width: 120px;}
+  .exam-breakdown .c { color: var(--good); border-color: var(--goodbg); }
+  .exam-breakdown .s { color: var(--warn); border-color: #4a3a12; }
+  .exam-breakdown .w { color: var(--bad); border-color: var(--badbg); }
+  .reveal-hidden{opacity:.32;filter:saturate(.4)}
+
+  /* Modal Navigation */
+  .nav-overlay { position:fixed; inset:0; background:rgba(13,16,20,0.85); z-index:100; display:flex; justify-content:center; align-items:center; opacity:0; pointer-events:none; transition:0.25s; backdrop-filter:blur(4px); }
+  .nav-overlay.active { opacity:1; pointer-events:auto; }
+  .nav-modal { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; width:90%; max-width:550px; max-height:85vh; overflow-y:auto; box-shadow:0 24px 48px rgba(0,0,0,0.6); transform:translateY(15px); transition:0.25s; }
+  .nav-overlay.active .nav-modal { transform:translateY(0); }
+  .nav-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--line); padding-bottom:12px; }
+  .nav-header h3 { font-size:18px; font-weight:600; margin:0; }
+  .nav-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(44px, 1fr)); gap:10px; }
+  .nav-cell { font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:600; background:var(--panel2); border:1px solid var(--line); color:var(--mut); border-radius:8px; display:flex; align-items:center; justify-content:center; aspect-ratio:1; cursor:pointer; transition:0.15s; }
+  .nav-cell:hover { border-color:var(--accent2); color:var(--ink); transform:translateY(-2px); }
+  .nav-cell.current { background:var(--accent2); color:#0a192f; border-color:var(--accent2); }
+  .nav-cell.answered { border-color:var(--good); color:var(--good); }
+  .nav-cell.wrong { border-color:var(--bad); color:var(--bad); }
+  .nav-cell.exam-done { border-color:var(--accent2); color:var(--accent2); }
+  
+  .katex{font-size:1.02em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="tag">Strict Exam Format (4 Options + Skip)</div>
+      <h1>Aerodynamics Master Prep <span id="modeLabel">— quiz</span></h1>
+    </div>
+    <div class="scorebox" id="scoreboxContainer"><div class="s"><span id="score">0</span>/<span id="seen">0</span></div><div class="l">correct</div></div>
+  </header>
+  
+  <div class="bar"><i id="prog"></i></div>
+  
+  <div class="controls-header">
+    <div class="seg" role="group" aria-label="mode">
+      <button id="mQuiz" aria-pressed="true">QUIZ</button>
+      <button id="mFlash" aria-pressed="false">FLASHCARDS</button>
+      <button id="mExam" class="exam-btn" aria-pressed="false">MOCK EXAM</button>
+    </div>
+    <button class="btn" id="navMenuBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      Menu
+    </button>
+  </div>
+  
+  <div class="chips" id="chips"></div>
+  <div id="stage"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div id="navModal" class="nav-overlay">
+  <div class="nav-modal">
+    <div class="nav-header">
+      <h3>Elenco Domande</h3>
+      <button class="btn" id="closeNavBtn" style="padding:6px 12px">✕</button>
+    </div>
+    <div class="nav-grid" id="navGrid"></div>
+    <div class="footer" style="margin-top:24px; justify-content:center;">
+      <button class="btn exam-fwd" id="navFinishBtn" style="display:none; width:100%">Termina Esame ed Invia →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   STRICT FORMAT: 1 Correct, 3 Distractors per Card. 
+   Total = 4 options + 1 skip automatically appended.
+   ============================================================ */
+const SKIP_TEXT = "I DO NOT ANSWER";
+
+let RAW_BANK = [
+  // --- CONCEPTUAL QUESTIONS ---
+  { t: "LES & Turbulence", q: "The computational cost of the DNS (Direct Numerical Simulation) is proportional to:",
+    o: ["\\(Re^{3/4}\\)", "\\(Re^{9/4}\\)", "\\(Re^{1/2}\\)", "\\(Re^{3}\\)"], c: 3,
+    e: "Resolving all spatial scales plus time steps requires a computational cost proportional to \\(Re^3\\)." },
+  { t: "LES & Turbulence", q: "In Large-Eddy Simulation technique, which statement is FALSE:",
+    o: ["It simulates large turbulent scales and models the finer ones", "The filter size must fall within the inertial scale", "It is a technology that allows us to effectively study strongly non-stationary phenomena", "Simulate the inertial and dissipative structure of motion"], c: 3,
+    e: "LES resolves large energy-containing scales but MODELS the dissipative subgrid scales; it does not simulate the dissipative structures directly." },
+  { t: "LES & Turbulence", q: "In turbulence the acronym LES indicates:",
+    o: ["A theory of turbulent flow that gives the size of the finest vortices", "A turbulent flow simulation technique in which only small scales are modeled", "A turbulent flow simulation technique in which only large-scale X are modeled", "A turbulent flow simulation technique in which no model is used"], c: 1,
+    e: "LES resolves the large eddies directly and relies on sub-grid scale (SGS) models strictly for the small, dissipative scales." },
+  { t: "LES & Turbulence", q: "Which of the following statement is FALSE regarding the Richardson-Kolmogorov theory?",
+    o: ["Small scales are isotropic and do not depend on the geometry", "The dissipated energy (dissipation rate) depends on viscosity", "The dissipative range is defined by universal quantities", "In the inertial subrange, viscosity and dissipative process are negligible"], c: 1,
+    e: "The amount of energy dissipated (the cascade rate) is dictated by the large, inviscid scales. Viscosity only determines the *size* of the smallest eddies where this dissipation finally occurs, not the rate itself." },
+  { t: "LES & Turbulence", q: "Which of the following expression can be used as model for the eddy viscosity (turbulent viscosity) within the RANS equation:",
+    o: ["\\(C_\\mu \\cdot k \\cdot \\omega\\)", "\\(C_\\mu \\cdot \\Delta^{2} \\cdot |\\tilde{S}|\\)", "\\(C_\\mu \\cdot k^{2} / \\epsilon\\)", "\\(C_\\mu \\cdot k / \\epsilon\\)"], c: 2,
+    e: "In the \\(k\\text{–}\\epsilon\\) RANS model, eddy viscosity is modeled dimensionally as \\(\\nu_t = C_\\mu k^2 / \\epsilon\\)." },
+  { t: "LES & Turbulence", q: "Reynold's effects are:",
+    o: ["Stresses of molecular origin that arises in a turbulent flow", "Stresses that arise in a turbulent flow due to velocity fluctuations", "Stresses appearing in the filtered equations (LES)", "Stresses induced by eddy viscosity"], c: 1,
+    e: "Reynolds stresses are apparent stresses arising from the time-averaged momentum fluxes of velocity fluctuations." },
+  { t: "LES & Turbulence", q: "Which statement is false regarding the Reynolds stresses?",
+    o: ["They are an unknown term in the RANS equations that cannot be obtained from first principles.", "The trace corresponds to twice the turbulent kinetic energy.", "They are quadratic terms in the fluctuation velocity and therefore negligible.", "They are represented by a symmetric second-order tensor."], c: 2,
+    e: "Reynolds stresses are NOT negligible; they dominate momentum transfer in high-Re turbulent flows." },
+  { t: "LES & Turbulence", q: "Which of the following expressions can be used as a model for the residual viscosity within the LES equations?",
+    o: ["\\(C_\\mu \\cdot k / \\epsilon\\)", "\\(C_\\mu \\cdot k \\omega\\)", "\\(C_\\mu \\cdot k \\epsilon\\)", "\\(C_s \\Delta^{2} |\\tilde{S}|\\)"], c: 3,
+    e: "This is the Smagorinsky subgrid-scale model: \\(\\nu_{SGS} = (C_s \\Delta)^2 |\\tilde{S}|\\)." },
+  { t: "LES & Turbulence", q: "In the description of turbulent flow, which term is found in both the mean field and turbulent K.E. equation:",
+    o: ["The term \\(\\nabla \\bullet <\\vec{u'}\\vec{u'}>\\) the flux of Reynolds stress", "The term \\(<\\vec{u'}\\vec{u'}> : \\nabla\\vec{U}\\), known as the production term.", "The term \\(\\epsilon=2\\nu e'_{ij}e'_{ij}\\) known as the dissipation term.", "The term \\(D=2\\nu E_{ij}E_{ij}\\), known as the dissipation term"], c: 1,
+    e: "Turbulent production drains kinetic energy from the mean flow and feeds it into the turbulent kinetic energy, appearing in both budgets with opposite signs." },
+  { t: "LES & Turbulence", q: "The ratio between large turbulent scales and small dissipative scales is proportional to:",
+    o: ["\\(Re^{3}\\)", "\\(Re^{9/4}\\)", "\\(Re^{1/2}\\)", "\\(Re^{3/4}\\)"], c: 3,
+    e: "According to Kolmogorov's first hypothesis, the length scale ratio is \\(L/\\eta \\propto Re^{3/4}\\)." },
+
+  // --- BOUNDARY LAYER ---
+  { t: "Boundary Layer", q: "In the flat boundary layer (with zero pressure gradient), the wall shear stress is:",
+    o: ["Proportional to \\(U_\\infty^{0.5}\\)", "Proportional to \\(U_\\infty^{2}\\)", "Proportional to \\(U_\\infty^{1.5}\\)", "Independent to \\(U_\\infty\\)"], c: 2,
+    e: "For a laminar flat boundary layer, \\(\\tau_w \\propto \\rho U_\\infty^{2} / \\sqrt{Re_x}\\). Since \\(Re_x \\propto U_\\infty\\), expanding this yields \\(\\tau_w \\propto U_\\infty^{1.5}\\)." },
+  { t: "Boundary Layer", q: "In a flat laminar boundary layer the resistance shows the following trends of proportionality with the length 'L' of the plate without angle of attack and with constant width 'b':",
+    o: ["\\(L^{2}\\)", "\\(L\\)", "\\(L^{1.5}\\)", "\\(L^{0.5}\\)"], c: 3,
+    e: "Total drag force \\(D = \\int_0^L \\tau_w b \\, dx\\). Since \\(\\tau_w \\propto x^{-0.5}\\), integrating this yields \\(D \\propto L^{0.5}\\)." },
+  { t: "Boundary Layer", q: "In the boundary layer around a solid body, which statement is TRUE?",
+    o: ["The pressure varies linearly in the direction normal to the wall", "The tangential velocity varies linearly in the direction normal to the wall", "The pressure is constant in all directions", "The pressure does not vary along the direction normal to the wall"], c: 3,
+    e: "A fundamental assumption of Prandtl's boundary layer theory is that the pressure gradient across the layer is negligible: \\(\\partial p / \\partial n \\approx 0\\)." },
+  
+  // SPLIT FALSE QUESTIONS
+  { t: "Boundary Layer", q: "In a boundary layer which statement is FALSE? (Variant A)",
+    o: ["The equation admits the condition of adhesion to the wall", "The equation is of parabolic type", "An increasing pressure gradient along the flow can lead to a separation", "An adverse pressure gradient ALWAYS leads to a separation"], c: 3,
+    e: "An adverse (increasing) pressure gradient is a necessary condition for separation, but it does NOT always lead to separation if it's mild enough." },
+  { t: "Boundary Layer", q: "In a boundary layer which statement is FALSE? (Variant B)", 
+    o: ["The pressure gradient of the external solution is imposed across the boundary layer thickness", "The orthogonal velocity is in general non-zero far from the boundary layer", "The velocity vector in the boundary layer must match asymptotically to the external velocity vector away from the wall", "The equation admits the condition of adhesion to the wall"], c: 2, 
+    e: "Because the normal component of velocity \\(v\\) does not decay to zero at the boundary layer edge, the full velocity *vector* does not asymptotically match the external inviscid vector (only the streamwise component \\(u\\) does)." },
+  
+  { t: "LES & Turbulence", q: "Which of the following expression is false regarding the turbulent channel ?",
+    o: ["The trend of the mean shear stress is linear in the directional to the wall.", "The velocity profile has a logarithmic trend in an intermediate region.", "The velocity profile is parabolic.", "As the Reynolds number increases, the wall shear stress increases."], c: 2,
+    e: "A fully developed turbulent channel velocity profile is 'blunted' (log-law), whereas a parabolic profile is characteristic strictly of laminar Poiseuille flow." },
+  { t: "Boundary Layer", q: "When the transition from laminar to turbulent flow occurs in the flow around a blunt body?",
+    o: ["Frictional resistance increase", "The form resistance increase", "The total resistance increase", "None of the above statement are true"], c: 0,
+    e: "Locally, transitioning to turbulence increases skin friction. However, on a blunt body, this turbulent mixing delays separation, drastically reducing form drag (and total drag)." },
+  { t: "Boundary Layer", q: "In the wake downstream of a bluff body:",
+    o: ["The flow is irrotational", "The flow is always turbulent", "Viscous effects can be neglected", "None of the above"], c: 3,
+    e: "The wake is highly rotational, inherently depends on viscous effects, and is not strictly turbulent (laminar Karman streets exist). Therefore, none of the specific claims are true." },
+
+  // --- SUPERSONIC & SHOCKS ---
+  { t: "Supersonic", q: "Wave drag:",
+    o: ["Increases as the relative thickness of the airfoil increases", "Decreases as the curvature of the airfoil increases", "Does not depend on the relative thickness of the airfoil", "Is maximum for symmetric airfoils wedge"], c: 0,
+    e: "Wave drag is exceptionally sensitive to thickness. In Ackeret theory, it scales with \\((t/c)^2\\)." },
+  
+  // SPLIT SUPERCRITICAL
+  { t: "Supersonic", q: "In a supercritical profile, which statement is FALSE? (Variant A)",
+    o: ["The Mach number can be supersonic on the upper surface", "The lift force is developed to a significant part by the second half of the airfoil", "A possible shock on the upper surface must not cause the boundary layer to separate", "The leading edge has a very small radius of curvature to decrease the thickness"], c: 3,
+    e: "Supercritical airfoils actually feature relatively LARGE, blunt leading-edge radii to delay flow acceleration, combined with a flattened upper surface." },
+  { t: "Supersonic", q: "In a supercritical profile, which statement is FALSE? (Variant B)",
+    o: ["The lower surface under design conditions must have subsonic flow", "The local Mach number around the airfoil cannot be supersonic under design conditions", "A possible shock on the upper surface must not cause the boundary layer to separate", "The lift force is developed to a significant part by the second half of the airfoil"], c: 1,
+    e: "Supercritical airfoils are designed precisely to have a local patch of supersonic flow over the upper surface, terminated by a weak shock." },
+  
+  { t: "Compressibility", q: "The definition of mach drag-divergence is:",
+    o: ["The freestream Mach number at which boundary layer separation begins to occur on the airfoil", "The freestream Mach number at which a shock occurs on the airfoil", "The Mach number at which there is a sharp increase in drag", "The highest Mach number around the airfoil when the freestream flow has the speed of sound"], c: 2,
+    e: "Drag divergence is aerodynamically defined as the specific freestream Mach number where wave drag begins rising abruptly." },
+  { t: "Delta Wing", q: "Delta Wing. Which statement is false:",
+    o: ["Lift is generated by both a potential part and part due to vortex.", "It can generate lift even at high angle of attack.", "It is a wing with low efficiency, but with stable behaviour as the mach no. change.", "Polhamus hypothesis is the aerodynamic force from potential flow is rotated due to the vortex."], c: 3,
+    e: "Polhamus' suction analogy posits that it is the leading-edge SUCTION force that is rotated 90° to act as a normal force, not the entire potential aerodynamic force." },
+  { t: "Shocks", q: "Curve collision, which statement is FALSE:",
+    o: ["The flow field deflection angle across the shock is generally different as the position varies", "The field downstream of the shock is generally non-isentropic", "The pressure downstream of the shock (impact) is uniform", "It occurs when the imposed deviation angle is greater than the maximum one"], c: 2,
+    e: "Because the wave angle \\(\\beta\\) changes along the length of a curved shock, the downstream pressure varies continuously. It is not uniform." },
+  { t: "Shocks", q: "Consider a supersonic flow that strikes a wedge resulting in an attached oblique shock. If the Mach number is increased, which of the following statement is FALSE?",
+    o: ["The pressure downstream of the shock will increase", "The shock will remain oblique and will tend to get closer to the body", "The normal Mach number will certainly increase", "The shock (impact) may be curved detached."], c: 3,
+    e: "Increasing the Mach number actually drives the shock closer to the wedge surface (more securely attached). Decreasing the Mach number leads to detachment." },
+  { t: "Shocks", q: "Strong oblique impacts. Which statement is FALSE?",
+    o: ["They show a wave inclination angle that is always greater than the corresponding weak wave.", "They are important for describing the curved collision.", "They show an over-greater increase in entropy compared to the corresponding weak wave.", "Downstream they almost always show a supersonic flow."], c: 3,
+    e: "By fundamental shock relations, the flow downstream of a STRONG oblique shock is definitively subsonic. Claiming it is supersonic is false." },
+  { t: "Shocks", q: "Regular reflection of an oblique shock on a wall. Which of these expression is FALSE?",
+    o: ["The deflection angle \\(\\theta_1\\) of the incident shock \\(\\theta_2\\) of the reflection shock are equal", "The angle \\(\\beta_1\\) of the incident shock \\(\\beta_2\\) of the reflection shock are equal", "The flow slows down after each shock", "The mach number can be supersonic downstream of the reflected shock"], c: 1,
+    e: "The Mach number drops after the incident shock (\\(M_2 < M_1\\)). To achieve the exact same flow deflection \\(\\theta\\) at this lower Mach number, the reflected shock must adopt a steeper angle (\\(\\beta_2 > \\beta_1\\))." },
+
+  // --- COMPRESSIBILITY ---
+  { t: "Compressibility", q: "Crocco-Busemann first relation. Which statement is FALSE?",
+    o: ["It express the variation of total temperature as a function of velocity (speed).", "Among the hypothesis it is necessary that the flow to be adiabatic.", "Among the hypothesis it is necessary that the flow have a Prandtl number \\((Pr=1)\\)", "It establishes that the adiabatic wall temperature is equal to the total temperature."], c: 0,
+    e: "The Crocco-Busemann relation provides the STATIC temperature (and static enthalpy) distribution as a function of velocity through the boundary layer. Stating it expresses the variation of 'total temperature' is physically false." },
+  { t: "Compressibility", q: "Which statement is false regarding the Prandtl number?",
+    o: ["It must be unity to derive the first Crocco-Busemann relation.", "It represents the intensity of momentum diffusion (viscosity) compared to thermal diffusion.", "For gases under standard conditions, it is approximately unity.", "It appears in the dimensionless compressible momentum balance equation."], c: 3,
+    e: "The Prandtl number appears in the ENERGY balance equation, linking the velocity and thermal boundary layers, not in the momentum equation." },
+  { t: "Compressibility", q: "Speed of Sound. Which statement is FALSE?",
+    o: ["It is constant along with a fluid trajectory.", "At the stagnation point, it is proportional to the total enthalpy.", "It measures the speed of propagation of infinitesimal disturbance.", "It is proportional to the square root of the temperature for ideal gases."], c: 0,
+    e: "The local speed of sound \\(a = \\sqrt{\\gamma R T}\\) depends strictly on local static temperature, which inherently changes as flow accelerates or decelerates along a trajectory." },
+  { t: "Compressibility", q: "Select the true statement. The total temperature is conserved:",
+    o: ["If the flow is subsonic", "Always", "In steady, adiabatic flows", "If the flow is solenoidal"], c: 2,
+    e: "Total temperature (and total enthalpy) is rigorously conserved along a streamline in any steady, adiabatic flow, regardless of reversibility or viscous presence." },
+  { t: "Compressibility", q: "Which statement is FALSE regarding expansion in ideal gases:",
+    o: ["It cause a decrease in sensible enthalpy.", "It cause a decrease in pressure.", "It cause an acceleration of the flow.", "The flow can expand discontinuity."], c: 3,
+    e: "Supersonic expansions are isentropic and occur continuously across expansion fans (Prandtl-Meyer waves). They cannot occur discontinuously like shocks." },
+  { t: "Compressibility", q: "Which statement is false for a steady-state adiabatic irreversible flow?",
+    o: ["The total enthalpy is conserved along a trajectory.", "The total density is conserved along a trajectory.", "The total temperature is conserved along a trajectory.", "The total pressure is not conserved."], c: 1,
+    e: "Because the flow is irreversible, entropy increases causing total pressure to drop. Since total temperature remains constant, the ideal gas law dictates that total density must drop." },
+
+  // --- VECTORS & THEOREMS ---
+  { t: "Vectors & Theorems", q: "Which of the following expression is not an identity?",
+    o: ["\\(\\frac{\\partial (aV_i)}{\\partial x_j} = \\frac{a\\partial V_i}{\\partial x_j} + \\frac{V_j\\partial a}{\\partial x_i}\\)", "\\(\\frac{\\partial (aV_i)}{\\partial x_i} = \\frac{a\\partial V_i}{\\partial x_i} + \\frac{V_i\\partial a}{\\partial x_i}\\)", "\\(\\frac{\\partial V_j}{\\partial x_j} = \\frac{\\partial V_k}{\\partial x_k}\\)", "\\(\\frac{\\partial^2 V_i}{\\partial x_j \\partial x_j} = \\frac{\\partial}{\\partial x_k} (\\frac{\\partial V_i}{\\partial x_k})\\)"], c: 0,
+    e: "The first option improperly swaps index \\(i\\) and \\(j\\) in the second term, flagrantly violating the product rule and index balance laws." },
+  { t: "Vectors & Theorems", q: "Which of the following expression is equal to \\(\\nabla\\cdot(\\nabla\\vec{V})^T\\)",
+    o: ["\\(\\nabla(\\nabla\\cdot\\vec{V})\\)", "\\(\\nabla^2\\vec{V}\\)", "\\(\\nabla\\cdot(\\nabla\\vec{V})\\)", "\\((\\nabla\\cdot\\nabla)\\vec{V}\\)"], c: 0,
+    e: "By index notation: \\(\\partial_i(\\partial_j V_i) = \\partial_j(\\partial_i V_i) = \\nabla(\\nabla\\cdot\\vec{V})\\)." },
+  { t: "Vectors & Theorems", q: "Which of the following expression is equal to \\(\\nabla\\cdot(\\nabla\\vec{V})\\)",
+    o: ["\\(\\nabla(\\nabla\\cdot\\vec{V})\\)", "\\((\\nabla\\cdot\\nabla)\\vec{V}\\)", "\\(\\nabla^2\\vec{V}\\)", "\\(\\nabla(\\nabla\\vec{V})\\)"], c: 2,
+    e: "The divergence of the gradient of a vector field cleanly yields the vector Laplacian \\(\\nabla^2\\vec{V}\\)." },
+  { t: "Vectors & Theorems", q: "To which geometric entity does the result of the following operation \\(\\vec{\\nabla}\\cdot(a\\vec{\\nabla}\\vec{U})\\) evaluate:",
+    o: ["Vector", "Tensor of order 2", "Scalar", "Tensor of order 3"], c: 0,
+    e: "The gradient \\(\\nabla\\vec{U}\\) yields a 2nd-order tensor. The divergence of a 2nd-order tensor drops it back down to a Vector." },
+  { t: "Vectors & Theorems", q: "Div [grad (V)], What is it equal to?",
+    o: ["gradient [gradient (V)]", "Divergence [divergence (V)]", "Divergence gradient of V", "Laplacian"], c: 3,
+    e: "The divergence of the gradient of a scalar field is the definition of the Laplacian." },
+
+  // --- THEORIES ---
+  { t: "Supersonic", q: "Which statement is TRUE regarding the small perturbation potential equation?",
+    o: ["It assume isentropicity and small flow perturbation", "It is a non-linear equation", "It is valid in general in the subsonic and supersonic regime without other hypotheses", "It is valid in the hypersonic regime"], c: 0,
+    e: "Linearized small perturbation theory rests strictly on the assumption of irrotational, isentropic flow with infinitesimally small disturbances." },
+  { t: "Supersonic", q: "Comparison of SET vs Ackeret for \\(M=2\\) \\(\\alpha=20^\\circ\\). Which statement is correct?",
+    o: ["Ackeret's theory is more accurate than SET for these parameters", "For this range of parameters we should have used the Prandtl-Glauert theory", "Ackeret's theory reproduces an excellent agreement with SET since we are within the application hypotheses", "Ackeret's theory does not reproduce an excellent agreement with SET since we are not within the application hypotheses"], c: 3,
+    e: "Ackeret theory is a linear approximation valid only for small deflections. An angle of 20° is massive aerodynamically, severely violating the small-perturbation assumption." },
+  { t: "Supersonic", q: "Which statement is false regarding hypersonic aerodynamics?",
+    o: ["The maximum efficiency occurs at angle of attack of approximately 55°.", "Ackeret's theory does not provide reliable results.", "Newtonian theory provides an estimate of the aerodynamic coefficients.", "In the limit of unit gamma and infinite Mach number, Newtonian theory becomes exact."], c: 0,
+    e: "In pure Newtonian theory, aerodynamic efficiency \\(L/D = \\cot \\alpha\\). The maximum efficiency therefore mathematically approaches infinity as the angle of attack approaches zero, not 55°." },
+
+  // ============================================================
+  // --- NUMERIC CALCULATIONS (Converted to MCQ 4-options) ---
+  // ============================================================
+  
+  // TURBULENCE
+  { t: "LES & Turbulence", q: "A flow is generated by a mechanical blade that provides 2 kW to a water mass of 100 kg (ρ=1000 kg/m³, ν=10⁻⁶ m²/s). What is the size of the smallest vortex structures? (m)",
+    o: ["\\(1.495\\cdot 10^{-5}\\) m", "\\(3.780\\cdot 10^{-5}\\) m", "\\(1.189\\cdot 10^{-4}\\) m", "\\(7.071\\cdot 10^{-6}\\) m"], c: 0, 
+    e: "\\(\\epsilon = 2000/100 = 20\\text{ W/kg}\\). \\(\\eta=(\\nu^3/\\epsilon)^{1/4}=1.495\\times10^{-5}\\text{ m}\\)." },
+  { t: "LES & Turbulence", q: "A blade provides 2 kW to a water mass of 10 kg (ρ=1000, ν=10⁻⁶). What is the velocity of the smallest eddies? (m/s)",
+    o: ["0.238 m/s", "0.119 m/s", "0.059 m/s", "1.414 m/s"], c: 1, 
+    e: "\\(\\epsilon = 200\\text{ W/kg}\\). \\(u_\\eta=(\\nu\\epsilon)^{1/4}=0.119\\text{ m/s}\\)." },
+  { t: "LES & Turbulence", q: "A blade gives 3 kW to 10 kg of water (ρ=1000, ν=10⁻⁶). Characteristic TIME of the finest eddies? (s)",
+    o: ["\\(3.78\\cdot 10^{-5}\\) s", "\\(1.49\\cdot 10^{-5}\\) s", "\\(5.77\\cdot 10^{-5}\\) s", "\\(7.07\\cdot 10^{-6}\\) s"], c: 2, 
+    e: "\\(\\epsilon=3000/10=300\\). \\(\\tau_\\eta=(\\nu/\\epsilon)^{1/2}=5.77\\times10^{-5}\\text{ s}\\)." },
+  { t: "LES & Turbulence", q: "A blade gives 7 kW to 10 kg of water (ρ=1000, ν=10⁻⁶). Characteristic TIME of the finest eddies? (s)",
+    o: ["\\(5.77\\cdot 10^{-5}\\) s", "\\(1.18\\cdot 10^{-4}\\) s", "\\(3.78\\cdot 10^{-5}\\) s", "\\(2.04\\cdot 10^{-5}\\) s"], c: 2, 
+    e: "\\(\\epsilon=7000/10=700\\). \\(\\tau_\\eta=(\\nu/\\epsilon)^{1/2}=3.78\\times10^{-5}\\text{ s}\\)." },
+  { t: "LES & Turbulence", q: "A blade gives 4 kW to 10 kg of water (ρ=1000, ν=10⁻⁶). Size of the finest eddies? (m)",
+    o: ["\\(1.49\\cdot 10^{-5}\\) m", "\\(7.07\\cdot 10^{-6}\\) m", "\\(3.78\\cdot 10^{-5}\\) m", "\\(1.18\\cdot 10^{-4}\\) m"], c: 1, 
+    e: "\\(\\epsilon=4000/10=400\\). \\(\\eta=(\\nu^3/\\epsilon)^{1/4}=7.07\\times10^{-6}\\text{ m}\\)." },
+  
+  // BOUNDARY LAYER
+  { t: "Boundary Layer", q: "Boundary layer on a flat plate. Airflow velocity 2 m/s (ν=10⁻⁵ m²/s). What is the friction coefficient at 0.5 m from the leading edge?",
+    o: ["0.00420", "0.00105", "0.00210", "0.00315"], c: 2, 
+    e: "\\(Re_x = Vx/\\nu = 2\\cdot0.5/10^{-5}=10^5\\). \\(C_f = 0.664/\\sqrt{Re_x}=0.664/316.2\\approx0.00210\\)." },
+  { t: "Boundary Layer", q: "Square plate of length L = 3m. An airflow at T = 293 K (ν = 1.5×10⁻⁵ m²/s) hits it at v = 2 m/s. What is the drag force (N) on one side? (Assume ρ = 1.2 kg/m³)",
+    o: ["0.0701 N", "0.0454 N", "0.0526 N", "0.0908 N"], c: 1, 
+    e: "\\(Re_L = 4\\cdot10^5\\) (laminar). \\(C_F = 1.328 / \\sqrt{Re_L} = 0.0021\\). \\(D = C_F \\cdot 0.5 \\cdot \\rho \\cdot U^2 \\cdot S = 0.0454\\text{ N}\\)." },
+  { t: "Boundary Layer", q: "Square plate 2 m side, flow T=293 K (ν=1.5×10⁻⁵ m²/s), velocity 4 m/s, angle 0°. What drag force (N) on one side? (Assume ρ=1.2 kg/m³)",
+    o: ["0.0454 N", "0.1052 N", "0.0701 N", "0.0350 N"], c: 2, 
+    e: "\\(Re_L = 5.33\\times10^5\\). \\(C_F \\approx 0.00182\\). \\(D = C_F \\cdot \\frac{1}{2}\\rho U^2 S \\approx 0.0701\\text{ N}\\)." },
+  
+  // SUPERSONIC
+  { t: "Supersonic", q: "Ackert (linearized) Theory with M = 10 and α = 20°: what is \\(C_D\\)?",
+    o: ["0.1073", "0.1403", "0.0489", "0.2948"], c: 2, 
+    e: "\\(C_D = 4\\alpha^2/\\sqrt{M^2-1}\\). Fails radically against SET due to high M and massive \\(\\alpha\\)." },
+  { t: "Supersonic", q: "Assuming M = 10 and α = 20°. Calculate the \\(C_L\\) using Ackeret theory.",
+    o: ["0.1403", "0.0489", "0.2948", "0.1073"], c: 0, 
+    e: "\\(C_L = 4\\alpha/\\sqrt{M^2-1} = 4 \\cdot (20 \\cdot \\pi/180) / \\sqrt{99} = 0.1403\\)." },
+  { t: "Supersonic", q: "Shock-Expansion Theory with M = 10 and α = 20°: what is \\(C_L\\)?",
+    o: ["0.1403", "0.1073", "0.0489", "0.2948"], c: 3, 
+    e: "Exact shock-expansion on the flat plate: resolve the normal pressure difference via Rankine-Hugoniot/Prandtl-Meyer." },
+  { t: "Supersonic", q: "Shock-Expansion Theory with M = 10 and α = 20°: what is \\(C_D\\)?",
+    o: ["0.1073", "0.0489", "0.1403", "0.2948"], c: 0, 
+    e: "Exact shock-expansion on the flat plate: resolve the streamwise projection of aerodynamic forces." },
+  { t: "Supersonic", q: "Ackeret (linearized) Theory with M = 2 and α = 14°: what is \\(C_L\\)?",
+    o: ["0.5776", "0.5643", "0.1440", "0.2821"], c: 1, 
+    e: "\\(C_L=4\\alpha/\\sqrt{M^2-1}\\); \\(\\alpha=14^\\circ=0.2443\\text{ rad}\\) → \\(4\\cdot0.2443/\\sqrt{3}=0.5643\\)." },
+  { t: "Supersonic", q: "Shock-Expansion Theory with M = 2 and α = 14°: what is \\(C_L\\)?",
+    o: ["0.5643", "0.1440", "0.5776", "0.2821"], c: 2, 
+    e: "Flat plate: lower face undergoes exact oblique shock, upper face undergoes Prandtl–Meyer expansion." },
+  { t: "Supersonic", q: "Shock-Expansion Theory with M = 2 and α = 14°: what is \\(C_d\\)?",
+    o: ["0.5776", "0.5643", "0.2821", "0.1440"], c: 3, 
+    e: "Streamwise component of the exact SET pressures." },
+  { t: "Supersonic", q: "Assuming M = 6 and α = 24°. Evaluate \\(C_L\\) using Shock-Expansion Theory.",
+    o: ["0.1987", "0.3341", "0.4463", "0.5012"], c: 2, 
+    e: "Exact shock-expansion on the flat plate." },
+  { t: "Supersonic", q: "Assuming M = 6 and α = 24°. Evaluate \\(C_D\\) using Shock-Expansion Theory.",
+    o: ["0.4463", "0.1346", "0.1987", "0.2855"], c: 2, 
+    e: "Resolve the streamwise projection of the exact pressure forces derived from oblique shock and expansion relations." },
+  
+  // NEWTONIAN
+  { t: "Supersonic", q: "A 2D flat plate travels at M = 15 with an angle of attack of 27°. What is the \\(C_d\\) computed using Newtonian theory?",
+    o: ["0.1346", "0.1051", "0.1870", "0.2060"], c: 2, 
+    e: "Newtonian theory dictates: \\(C_n=2\\sin^2\\alpha\\), \\(C_d=C_n\\sin\\alpha=2\\sin^3\\alpha=2\\sin^3(27^\\circ)=0.1870\\)." },
+  { t: "Supersonic", q: "An airfoil, approximated as a 2D flat plate, travels at M = 15 with an angle of attack of 24°. What is the \\(C_d\\) computed using Newtonian theory?",
+    o: ["0.1870", "0.1346", "0.1051", "0.0890"], c: 1, 
+    e: "\\(C_d=2\\sin^3\\alpha=2\\sin^3(24^\\circ)=0.1346\\)." },
+  { t: "Supersonic", q: "An airfoil, approximated as a 2D flat plate, travels at M = 15 with an angle of attack of 22°. What is the \\(C_d\\) computed using Newtonian theory?",
+    o: ["0.1346", "0.1870", "0.1051", "0.0650"], c: 2, 
+    e: "\\(C_d=2\\sin^3\\alpha=2\\sin^3(22^\\circ)=0.1051\\)." },
+  { t: "Supersonic", q: "An airfoil, approximated as a 2D flat plate, travels at M = 15 with an angle of attack of 10°. What is the \\(C_d\\) computed using Newtonian theory?",
+    o: ["0.1051", "0.0105", "0.0052", "0.0210"], c: 1, 
+    e: "\\(C_d=2\\sin^3(10^\\circ)=0.01045 \\approx 0.0105\\)." },
+  
+  // SHOCKS
+  { t: "Shocks", q: "A supersonic flow at M = 2 hits a wedge of θ = 10°. What is the shock angle β approximately?",
+    o: ["29.3°", "45.0°", "39.2°", "53.1°"], c: 2, 
+    e: "From the standard θ–β–M relation charting the weak-shock branch at \\(M=2,\\ \\theta=10^\\circ\\)." },
+  
+  // COMPRESSIBILITY NUMERICS
+  { t: "Compressibility", q: "A supersonic flow strikes a flat plate. Flow velocity 210 m/s, temperature 50 °C, R = 287 J/kgK. What is the Mach number?",
+    o: ["0.70", "0.74", "0.90", "0.58"], c: 3, 
+    e: "Gas dynamics: \\(a = \\sqrt{\\gamma R T}\\). T = 323.15 K, \\(a \\approx 360.3\\text{ m/s}\\). \\(M = 210/360.3 \\approx 0.58\\)." },
+  { t: "Compressibility", q: "An experiment in incompressible flow gives \\(C_L^0 = 0.6\\). Same angle of attack at M = 0.6 → \\(C_L\\)?",
+    o: ["0.600", "0.500", "0.750", "0.625"], c: 2, 
+    e: "Prandtl-Glauert rule: \\(C_L = C_L^0 / \\sqrt{1 - M^2}\\). \\(C_L = 0.6 / 0.8 = 0.750\\)." },
+  { t: "Compressibility", q: "An experiment in incompressible flow gives \\(C_L^0 = 0.4\\). Same angle of attack at M = 0.6 → \\(C_L\\)?",
+    o: ["0.500", "0.400", "0.750", "0.625"], c: 0, 
+    e: "Prandtl-Glauert rule: \\(C_L = 0.4 / 0.8 = 0.500\\)." },
+  { t: "Compressibility", q: "An experiment in incompressible flow gives \\(C_L^0 = 0.5\\). Same angle of attack at M = 0.6 → \\(C_L\\)?",
+    o: ["0.500", "0.750", "0.400", "0.625"], c: 3, 
+    e: "Prandtl-Glauert rule: \\(C_L = 0.5 / 0.8 = 0.625\\)." },
+  { t: "Compressibility", q: "Incompressible \\(C_L^0=0.4\\). Same α in air at T = −50 °C, V = 210 m/s → \\(C_L\\)?",
+    o: ["0.589", "0.500", "0.561", "0.701"], c: 2, 
+    e: "\\(a=\\sqrt{1.4\\cdot287\\cdot223.15}=299.4\\text{ m/s}\\) → \\(M=0.701\\). \\(C_L=0.4/\\sqrt{1-0.701^2}=0.561\\)." },
+  { t: "Compressibility", q: "Incompressible \\(C_L^0=0.4\\). Same α in air at T = −70 °C, V = 210 m/s → \\(C_L\\)?",
+    o: ["0.561", "0.500", "0.735", "0.589"], c: 3, 
+    e: "\\(a=\\sqrt{1.4\\cdot287\\cdot203.15}=285.7\\text{ m/s}\\) → \\(M=0.735\\). \\(C_L=0.4/\\sqrt{1-0.735^2}=0.589\\)." }
+];
+
+// 5th Option Injection: "I DO NOT ANSWER"
+RAW_BANK.forEach(item => {
+  if (item.o && !item.o.includes(SKIP_TEXT)) {
+    item.o.push(SKIP_TEXT);
+  }
+});
+
+const BANK = RAW_BANK;
+const LETTERS = ["1", "2", "3", "4", "5"]; // Exactly 5 options per card now
+let mode = "quiz", topic = "All", deck = [], idx = 0, score = 0, seen = 0;
+let wrong = []; 
+
+const stage = document.getElementById("stage"), hint = document.getElementById("hint");
+const topics = ["All", ...[...new Set(BANK.map(x => x.t))]];
+
+function tex(el){
+  if(window.renderMathInElement){
+    try{renderMathInElement(el,{delimiters:[{left:"\\(",right:"\\)",display:false},{left:"\\[",right:"\\]",display:true}],throwOnError:false});}catch(e){}
+  }
+}
+
+function buildChips(){
+  const c = document.getElementById("chips"); c.innerHTML = "";
+  topics.forEach(t => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = t === "All" ? "ALL (" + BANK.length + ")" : t.toUpperCase();
+    b.setAttribute("aria-pressed", t === topic);
+    b.onclick = () => { topic = t; start(); }; c.appendChild(b);
+  });
+}
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function start(reviewSet){
+  buildChips();
+  let pool = BANK.filter(x => topic === "All" || x.t === topic);
+  
+  if(reviewSet) {
+     deck = reviewSet;
+     document.getElementById("modeLabel").textContent = "— Reviewing Mistakes";
+     document.getElementById("scoreboxContainer").style.display = "block";
+  } else if(mode === "exam") {
+    // 10 Question Mock Exam
+    deck = shuffle(pool).slice(0, 10);
+    document.getElementById("modeLabel").textContent = "— 10 Question Mock Exam";
+    document.getElementById("scoreboxContainer").style.display = "none";
+  } else {
+    deck = shuffle(pool);
+    document.getElementById("modeLabel").textContent = (mode === "quiz" ? "— quiz" : "— flashcards");
+    document.getElementById("scoreboxContainer").style.display = "block";
+  }
+  
+  deck.forEach(q => {
+     q.isAnswered = false;
+     q.userAnswer = null;    
+     q.flashStatus = null;   
+  });
+  
+  idx = 0; score = 0; seen = 0; 
+  if (!reviewSet) wrong = []; 
+  
+  if(!deck.length){stage.innerHTML = "<div class='card'>Nessuna domanda disponibile in questa categoria.</div>"; return;}
+  renderCard();
+}
+
+function hud(){
+  document.getElementById("score").textContent = score; 
+  document.getElementById("seen").textContent = seen; 
+  document.getElementById("prog").style.width = (deck.length ? idx / deck.length * 100 : 0) + "%";
+}
+
+function renderCard(){
+  const it = deck[idx]; 
+  hud();
+  
+  let h = `<div class="card"><div class="meta"><span class="pill">${it.t}</span><span class="qnum">${idx+1} / ${deck.length}</span></div><div class="q">${it.q}</div>`;
+  
+  // MCQ Options Rendering
+  h += `<div class="opts">`;
+  it.o.forEach((opt, i) => {
+       let cls = `opt`;
+       if (mode === "flash" && !it.isAnswered) cls += ` reveal-hidden`;
+       
+       if (mode === "exam") {
+           if (it.userAnswer === i) cls += ` exam-selected`;
+       } else if (mode === "quiz" && it.isAnswered) {
+           if (i === it.c) cls += ` correct`;
+           else if (i === it.userAnswer && opt !== SKIP_TEXT) cls += ` wrong`;
+       } else if (mode === "flash" && it.isAnswered) {
+           if (i === it.c) cls += ` correct`;
+       }
+       
+       let disabled = (mode !== "exam" && it.isAnswered) ? `disabled` : ``;
+       h += `<button class="${cls}" data-i="${i}" ${disabled} onclick="${mode==='exam' ? `selectExamOption(${i})` : `choose(${i})`}"><span class="k">${LETTERS[i]}</span><span>${opt}</span></button>`;
+  });
+  h += `</div>`;
+  
+  // Explanation Rendering
+  if ((mode === "quiz" || mode === "flash") && it.isAnswered) {
+       let v = "";
+       if (mode === "quiz") {
+           const ok = (it.userAnswer === it.c);
+           v = ok ? `<span class="verdict ok">✓ Corretto</span>` : (it.o[it.userAnswer] === SKIP_TEXT ? `<span class="verdict skip">○ Saltato</span>` : `<span class="verdict no">✗ Errato</span>`);
+       }
+       h += `<div id="explainSlot"><div class="explain">${v}<b>Risposta corretta:</b> ${it.o[it.c]}<br><br>${it.e}</div></div>`;
+  } else {
+       h += `<div id="explainSlot"></div>`;
+  }
+  
+  // Footer Rendering
+  h += `<div class="footer">`;
+  if (mode === "exam") {
+       h += `<button class="btn exam-fwd" onclick="next()">${idx >= deck.length - 1 ? "Riepilogo Esame →" : "Prossima Domanda →"}</button>`;
+       hint.innerHTML = `Seleziona l'opzione desiderata. Puoi sempre cambiare idea navigando indietro.`;
+  } else if (mode === "quiz") {
+       if (it.isAnswered) {
+           h += `<button class="btn primary" style="margin-left:auto" onclick="next()">${idx >= deck.length - 1 ? "Vedi Risultati →" : "Prossima →"}</button>`;
+           hint.innerHTML = `<kbd>Invio</kbd> per continuare`;
+       } else {
+           hint.innerHTML = `Premi <kbd>1</kbd>–<kbd>${it.o.length}</kbd> per rispondere`;
+       }
+  } else if (mode === "flash") {
+       if (!it.isAnswered) {
+           h += `<button class="btn primary" onclick="revealMcq()">Mostra Risposta</button>`;
+           hint.innerHTML = `Premi <kbd>spazio</kbd> per rivelare`;
+       } else {
+           if (it.flashStatus) {
+               h += `<div class="verdict ${it.flashStatus==='correct'?'ok':'no'}">${it.flashStatus==='correct'?'✓ Lo sapevo':'✗ Sbagliato'}</div><button class="btn primary" style="margin-left:auto" onclick="next()">Prossima →</button>`;
+               hint.innerHTML = `<kbd>Invio</kbd> per continuare`;
+           } else {
+               h += `<button class="btn good" onclick="selfRate(true)">✓ Lo sapevo</button><button class="btn bad" onclick="selfRate(false)">✗ Ho sbagliato</button>`;
+               hint.innerHTML = `Premi <kbd>g</kbd> se la sapevi, <kbd>m</kbd> se hai sbagliato`;
+           }
+       }
+  }
+  h += `</div>`;
+  h += `</div>`;
+  
+  stage.innerHTML = h; tex(stage);
+}
+
+function choose(i){
+  const it = deck[idx];
+  if(it.isAnswered) return;
+  it.isAnswered = true;
+  it.userAnswer = i;
+  seen++;
+  if(i === it.c) score++; else wrong.push(it);
+  renderCard();
+}
+
+function selectExamOption(i){
+  deck[idx].userAnswer = i;
+  renderCard();
+}
+
+function revealMcq(){
+  deck[idx].isAnswered = true;
+  renderCard();
+}
+
+function selfRate(gotIt){
+  const it = deck[idx];
+  if(it.flashStatus) return;
+  it.flashStatus = gotIt ? 'correct' : 'wrong';
+  seen++;
+  if(gotIt) score++; else wrong.push(it);
+  next();
+}
+
+function next(){
+  if(idx >= deck.length - 1){ 
+    if(mode === "exam") openNavMenu(); 
+    else results(); 
+    return; 
+  }
+  idx++; renderCard();
+}
+
+function examResults() {
+  document.getElementById("prog").style.width = "100%";
+  let pts = 0; let cCount = 0; let sCount = 0; let wCount = 0;
+  wrong = []; 
+  
+  deck.forEach(q => {
+    let ansIdx = q.userAnswer !== null ? q.userAnswer : q.o.indexOf(SKIP_TEXT);
+    if(ansIdx === q.c) { pts += 1.5; cCount++; }
+    else if(q.o[ansIdx] === SKIP_TEXT) { pts += 0.3; sCount++; }
+    else { wCount++; wrong.push(q); }
+  });
+
+  const revBtn = wrong.length ? `<button class="btn bad" id="reviewExam">Rivedi i ${wrong.length} errori →</button>` : "";
+
+  stage.innerHTML = `
+    <div class="card">
+      <div class="results">
+        <div class="big">${pts.toFixed(1)} / 15.0</div>
+        <div class="sub">Punteggio Finale Mock Exam</div>
+        <div class="exam-breakdown">
+           <div class="c"><b>${cCount}</b> Corrette<br><small>(+${(cCount*1.5).toFixed(1)} pt)</small></div>
+           <div class="s"><b>${sCount}</b> Saltate<br><small>(+${(sCount*0.3).toFixed(1)} pt)</small></div>
+           <div class="w"><b>${wCount}</b> Errate<br><small>(0 pt)</small></div>
+        </div>
+        <div class="msg">Valutazione Standard: +1.5 Corretta | +0.3 Non Data | 0 Errata</div>
+        <div class="footer" style="justify-content:center">
+          <button class="btn exam-fwd" id="again">↻ Nuovo Mock Exam</button>
+          ${revBtn}
+        </div>
+      </div>
+    </div>`;
+  hint.innerHTML = "";
+  
+  document.getElementById("again").onclick = () => start();
+  if(wrong.length) {
+    document.getElementById("reviewExam").onclick = () => {
+      mode = "quiz"; 
+      document.getElementById("mQuiz").setAttribute("aria-pressed", "true"); 
+      document.getElementById("mExam").setAttribute("aria-pressed", "false"); 
+      document.getElementById("mFlash").setAttribute("aria-pressed", "false"); 
+      start(wrong); 
+    };
+  }
+}
+
+function results(){
+  hud(); document.getElementById("prog").style.width = "100%";
+  const pct = seen ? Math.round(score / seen * 100) : 0;
+  let msg = pct >= 90 ? "Pronto per l'esame. Fai un ultimo giro per sicurezza." : pct >= 70 ? "Solido — ripassa gli errori." : pct >= 50 ? "Ci stiamo arrivando. Concentrati sugli errori." : "Fase iniziale — fai pratica con le carte sbagliate.";
+  const revBtn = wrong.length ? `<button class="btn bad" id="review">Rivedi i ${wrong.length} errori →</button>` : "";
+  stage.innerHTML = `<div class="card"><div class="results"><div class="big">${pct}%</div><div class="sub">${score} / ${seen} corrette${topic !== "All" ? " · " + topic : ""}</div><div class="msg">${msg}</div><div class="footer" style="justify-content:center"><button class="btn primary" id="again">↻ Ricomincia</button>${revBtn}</div></div></div>`;
+  hint.innerHTML = "";
+  document.getElementById("again").onclick = () => start();
+  if(wrong.length) document.getElementById("review").onclick = () => start(wrong);
+}
+
+function openNavMenu() {
+    const grid = document.getElementById('navGrid');
+    grid.innerHTML = '';
+    
+    deck.forEach((q, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'nav-cell';
+        
+        if (i === idx) {
+            btn.classList.add('current');
+        } else {
+            if (mode === 'exam' && q.userAnswer !== null) {
+                btn.classList.add('exam-done');
+            } else if (mode === 'quiz' && q.isAnswered) {
+                if (q.userAnswer === q.c) btn.classList.add('answered');
+                else btn.classList.add('wrong');
+            } else if (mode === 'flash' && q.isAnswered) {
+                if(q.flashStatus === 'wrong') btn.classList.add('wrong');
+                else btn.classList.add('answered');
+            }
+        }
+        
+        btn.textContent = i + 1;
+        btn.onclick = () => {
+            document.getElementById('navModal').classList.remove('active');
+            idx = i;
+            renderCard();
+        };
+        grid.appendChild(btn);
+    });
+    
+    const finishBtn = document.getElementById('navFinishBtn');
+    if (mode === 'exam') {
+        finishBtn.style.display = 'flex';
+        finishBtn.onclick = () => {
+            document.getElementById('navModal').classList.remove('active');
+            examResults();
+        };
+    } else {
+        finishBtn.style.display = 'none';
+    }
+    
+    document.getElementById('navModal').classList.add('active');
+}
+
+document.getElementById('navMenuBtn').onclick = openNavMenu;
+document.getElementById('closeNavBtn').onclick = () => document.getElementById('navModal').classList.remove('active');
+
+document.addEventListener("keydown", e => {
+  if(document.getElementById('navModal').classList.contains('active')) {
+      if(e.key === "Escape") document.getElementById('navModal').classList.remove('active');
+      return;
+  }
+  
+  const it = deck[idx]; if(!it) return;
+  
+  if(mode === "quiz" || mode === "exam"){
+    if(!it.isAnswered || mode === "exam"){
+      if(/^[1-5]$/.test(e.key)){
+          const i = +e.key - 1; 
+          if(mode === "exam") selectExamOption(i); else choose(i);
+      }
+    } 
+    if((it.isAnswered && mode === "quiz") || mode === "exam"){
+      if(e.key === "Enter" || e.key === " "){
+          e.preventDefault(); next();
+      }
+    }
+  } else {
+    if(!it.isAnswered && (e.key === " " || e.key === "Enter")){
+      e.preventDefault(); revealMcq();
+    } else if(it.isAnswered && !it.flashStatus){
+      if(e.key === "g"){ selfRate(true); }
+      else if(e.key === "m"){ selfRate(false); }
+    } else if(it.flashStatus && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault(); next();
+    }
+  }
+});
+
+document.getElementById("mQuiz").onclick = () => setMode("quiz");
+document.getElementById("mFlash").onclick = () => setMode("flash");
+document.getElementById("mExam").onclick = () => setMode("exam");
+
+function setMode(m){
+  mode = m; 
+  document.getElementById("mQuiz").setAttribute("aria-pressed", m === "quiz"); 
+  document.getElementById("mFlash").setAttribute("aria-pressed", m === "flash"); 
+  document.getElementById("mExam").setAttribute("aria-pressed", m === "exam"); 
+  start();
+}
+
+start();
+</script>
+</body>
+</html>
